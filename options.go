@@ -43,6 +43,7 @@ type options struct {
 	FcRootPartUUID     string   `long:"root-partition" description:"Root partition UUID"`
 	FcAdditionalDrives []string `long:"add-drive" description:"Path to additional drive, suffixed with :ro or :rw, can be specified multiple times"`
 	FcNicConfig        []string `long:"tap-device" description:"NIC info, specified as DEVICE/MAC, can be specified multiple times"`
+	FcCNINetwork       string   `long:"cni-network" description:"CNI network name (from /etc/cni/conf.d) for VM networking, requires tc-redirect-tap CNI plugin"`
 	FcVsockDevices     []string `long:"vsock-device" description:"Vsock interface, specified as PATH:CID. Multiple OK"`
 	FcLogFifo          string   `long:"vmm-log-fifo" description:"FIFO for firecracker logs"`
 	FcLogLevel         string   `long:"log-level" description:"vmm log level" default:"Debug"`
@@ -160,7 +161,24 @@ func (opts *options) getFirecrackerConfig() (firecracker.Config, error) {
 }
 
 func (opts *options) getNetwork() ([]firecracker.NetworkInterface, error) {
+	if opts.FcCNINetwork != "" && len(opts.FcNicConfig) > 0 {
+		return nil, errCNIAndTapConflict
+	}
+
 	var NICs []firecracker.NetworkInterface
+
+	if opts.FcCNINetwork != "" {
+		nic := firecracker.NetworkInterface{
+			CNIConfiguration: &firecracker.CNIConfiguration{
+				NetworkName: opts.FcCNINetwork,
+				IfName:      "veth0",
+			},
+			AllowMMDS: opts.validMetadata != nil,
+		}
+		NICs = append(NICs, nic)
+		return NICs, nil
+	}
+
 	if len(opts.FcNicConfig) > 0 {
 		for _, nicConfig := range opts.FcNicConfig {
 			tapDev, tapMacAddr, err := parseNicConfig(nicConfig)

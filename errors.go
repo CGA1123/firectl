@@ -27,6 +27,7 @@ var (
 	errUnableToParseVsockDevices = errors.New("unable to parse vsock devices")
 	errUnableToParseVsockCID     = errors.New("unable to parse vsock CID as a number")
 
+	errCNIAndTapConflict         = errors.New("--cni-network and --tap-device cannot be used together")
 	errConflictingLogOpts        = errors.New("vmm-log-fifo and firecracker-log cannot be used together")
 	errUnableToCreateFifoLogFile = errors.New("failed to create fifo log file")
 
